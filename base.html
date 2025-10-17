@@ -1,135 +1,518 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Three.js First-Person Scene Template</title>
-  <style>body { margin: 0; overflow: hidden; }</style>
+  <meta charset="utf-8"/>
+  <title>Roguelike FPS Dungeon (Three.js)</title>
+  <style>
+    html,body { margin:0; height:100%; overflow:hidden; font-family: Arial, Helvetica, sans-serif; }
+    #ui {
+      position: absolute; top: 10px; left: 10px; z-index: 10; color: #fff;
+      background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px;
+    }
+    #hud { font-size: 14px; line-height: 1.4; }
+    #instructions {
+      position: absolute; bottom: 10px; left: 10px; z-index: 10; color: #ddd;
+      background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px;
+      font-size: 13px;
+    }
+    #overlay {
+      position: absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      z-index: 20; pointer-events:none;
+    }
+    #gameOver {
+      display:none; pointer-events:auto;
+      background: rgba(0,0,0,0.6); color:#fff; padding: 24px; border-radius: 10px;
+      text-align:center; width: 360px;
+    }
+    canvas { display:block; }
+  </style>
 </head>
 <body>
-<script type="module">
-import * as THREE from 'https://unpkg.com/three@0.158.0/build/three.module.js';
+  <div id="ui">
+    <div id="hud">
+      <div>Health: <span id="health">100</span></div>
+      <div>Room: <span id="room">1</span></div>
+      <div>Enemies: <span id="enemiesCount">0</span></div>
+    </div>
+  </div>
+  <div id="instructions">
+    Click on the screen to lock pointer. WASD to move, mouse to look, left click to shoot, Space to jump, R to reset.
+  </div>
+  <div id="overlay">
+    <div id="gameOver">
+      <h1 id="gameOverTitle">Game Over</h1>
+      <p id="gameOverText">You died. Press R to restart.</p>
+      <button id="restartBtn">Restart (R)</button>
+    </div>
+  </div>
 
-// ---------- Scene, Camera, Renderer ----------
-const scene = new THREE.Scene();
+  <!-- Three.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+  <script>
+  // Roguelike-first-person shooter (simplified and self-contained)
+  // Save as index.html and open in a browser.
 
-const camera = new THREE.PerspectiveCamera(
-  75,                      // fov
-  window.innerWidth / window.innerHeight, // aspect
-  0.1,                     // near
-  1000                     // far
-);
+  // === Basic Setup ===
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0f1a);
 
-// Place camera at player's eye height; position will be updated when camera is attached to player
-camera.position.set(0, 1.6, 0);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-document.body.appendChild(renderer.domElement);
-
-// ---------- Basic Lighting ----------
-const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-hemi.position.set(0, 50, 0);
-scene.add(hemi);
-
-const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-dir.position.set(-5, 10, -5);
-dir.castShadow = true;
-scene.add(dir);
-
-// ---------- Ground and Example Objects ----------
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-const box = new THREE.Mesh(
-  new THREE.BoxGeometry(1,1,1),
-  new THREE.MeshStandardMaterial({ color: 0x00aaee })
-);
-box.position.set(0, 0.5, -5);
-scene.add(box);
-
-// ---------- First-Person Player Object ----------
-const player = new THREE.Object3D();
-player.position.set(0, 0, 0);
-scene.add(player);
-
-// Attach camera to player for true first-person view so camera moves/rotates with player
-player.add(camera);
-
-// Optional: offset camera to eye height relative to player
-camera.position.set(0, 1.6, 0);
-
-// ---------- Simple First-Person Controls (keyboard + mouse look) ----------
-let pitch = 0;  // up/down rotation
-let yaw = 0;    // left/right rotation
-const sensitivity = 0.002;
-const moveSpeed = 5.0;
-const keys = { forward: false, back: false, left: false, right: false };
-
-function onPointerMove(e) {
-  if (document.pointerLockElement === renderer.domElement) {
-    yaw -= e.movementX * sensitivity;
-    pitch -= e.movementY * sensitivity;
-    pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
-    player.rotation.y = yaw;
-    camera.rotation.x = pitch;
-  }
-}
-
-function onKeyDown(e) {
-  if (e.code === 'KeyW') keys.forward = true;
-  if (e.code === 'KeyS') keys.back = true;
-  if (e.code === 'KeyA') keys.left = true;
-  if (e.code === 'KeyD') keys.right = true;
-}
-
-function onKeyUp(e) {
-  if (e.code === 'KeyW') keys.forward = false;
-  if (e.code === 'KeyS') keys.back = false;
-  if (e.code === 'KeyA') keys.left = false;
-  if (e.code === 'KeyD') keys.right = false;
-}
-
-renderer.domElement.addEventListener('click', () => {
-  renderer.domElement.requestPointerLock();
-});
-
-window.addEventListener('pointermove', onPointerMove);
-window.addEventListener('keydown', onKeyDown);
-window.addEventListener('keyup', onKeyUp);
-
-// ---------- Resize Handling ----------
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
 
-// ---------- Animation Loop ----------
-const clock = new THREE.Clock();
+  // Camera (first-person)
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 1.6, 0); // player eye height
 
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = clock.getDelta();
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.35);
+  scene.add(ambient);
 
-  // Movement relative to player's orientation
-  const forward = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0);
-  const strafe = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-  if (forward !== 0 || strafe !== 0) {
-    const forwardVec = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
-    const rightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(player.quaternion);
-    const move = forwardVec.multiplyScalar(forward * moveSpeed * dt)
-               .add(rightVec.multiplyScalar(strafe * moveSpeed * dt));
-    player.position.add(move);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(5, 10, 5);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
+  scene.add(dirLight);
+
+  // Simple floor plane (floor will be rebuilt per-room)
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x22272f });
+  let floorMesh = null;
+
+  // Player object (logical)
+  const player = {
+    pos: new THREE.Vector3(0, 1.6, 0),
+    velocity: new THREE.Vector3(),
+    speed: 4.0,        // movement speed (m/s)
+    jumpSpeed: 6.0,
+    radius: 0.25,
+    onGround: false,
+    health: 100,
+    alive: true
+  };
+
+  // Controls: pointer lock & mouse look
+  let yaw = 0, pitch = 0;
+  const sensitivity = 0.002;
+  const keys = {};
+  renderer.domElement.addEventListener('click', () => {
+    renderer.domElement.requestPointerLock?.();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    // nothing special here; pointer movement always captured after lock
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === renderer.domElement) {
+      yaw -= e.movementX * sensitivity;
+      pitch -= e.movementY * sensitivity;
+      pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, pitch));
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    if (e.code === 'KeyR') initGame();
+    if (e.code === 'Space') e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+  // --- Simple dungeon & room generation ---
+  // We'll make "rooms" of fixed size and spawn simple walls. When player crosses a door threshold, we advance room.
+  const ROOM_SIZE = 12;
+  const WALL_THICKNESS = 1;
+  let roomIndex = 1;
+  let currentRoom = { enemies: [], sceneObjs: [] };
+
+  const world = {
+    walls: [] // AABB walls for collision: {min:Vector3, max:Vector3}
+  };
+
+  function clearCurrentRoom() {
+    // remove meshes from scene
+    currentRoom.sceneObjs.forEach(o => scene.remove(o));
+    currentRoom.sceneObjs = [];
+    currentRoom.enemies = [];
+    world.walls = [];
   }
 
-  renderer.render(scene, camera);
-}
+  function buildRoom(index) {
+    clearCurrentRoom();
+    roomIndex = index;
+    document.getElementById('room').textContent = roomIndex;
 
-animate();
-</script>
+    // floor
+    if (floorMesh) scene.remove(floorMesh);
+    const floorGeo = new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE);
+    floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.rotation.x = -Math.PI/2;
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+    currentRoom.sceneObjs.push(floorMesh);
+
+    // walls (4)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x444a56 });
+    const half = ROOM_SIZE/2;
+    const w = WALL_THICKNESS;
+    // +Z wall
+    createWall(0, w/2 + 0.01, half + w/2, ROOM_SIZE + w*2, w, wallMat);
+    // -Z wall
+    createWall(0, w/2 + 0.01, -half - w/2, ROOM_SIZE + w*2, w, wallMat);
+    // +X wall
+    createWall(half + w/2, w/2 + 0.01, 0, w, ROOM_SIZE + w*2, wallMat);
+    // -X wall
+    createWall(-half - w/2, w/2 + 0.01, 0, w, ROOM_SIZE + w*2, wallMat);
+
+    // Create 1-2 doors by carving openings (we'll simply leave a gap in a wall and not put a wall piece there)
+    // For simplicity: make a door centered on -Z side; player starts near -Z and moves towards +Z to progress.
+    // Mark a "door threshold" area near +Z wall center to trigger new room.
+    const doorSize = 2;
+    // Put a visual door frame for +Z side
+    const frameGeo = new THREE.BoxGeometry(doorSize, 3, 0.2);
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a7a7a });
+    const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.position.set(0, 1.5, half - 0.2);
+    scene.add(frame);
+    currentRoom.sceneObjs.push(frame);
+
+    // Some environment props (crates)
+    for (let i=0;i<4;i++){
+      const boxGeo = new THREE.BoxGeometry(1,1,1);
+      const boxMat = new THREE.MeshStandardMaterial({ color: 0x6b4f3a });
+      const box = new THREE.Mesh(boxGeo, boxMat);
+      box.castShadow = true;
+      const rx = (Math.random()*ROOM_SIZE - ROOM_SIZE/2) * 0.6;
+      const rz = (Math.random()*ROOM_SIZE - ROOM_SIZE/2) * 0.6;
+      box.position.set(rx, 0.5, rz);
+      scene.add(box);
+      currentRoom.sceneObjs.push(box);
+      // add to simple walls for collision (so player can't pass through crate)
+      const min = new THREE.Vector3(rx-0.5, 0, rz-0.5);
+      const max = new THREE.Vector3(rx+0.5, 1, rz+0.5);
+      world.walls.push({min, max});
+    }
+
+    // Build outer walls AABBs: instead of continuous walls, create 4 thick boxes but leave a small gap at +Z center for the door
+    // +Z wall segments left and right of door
+    const halfDoor = doorSize/2;
+    createWallSegment(-half + half/2, 1.5, half + w/2, ROOM_SIZE - doorSize - 0.8, 3, w, wallMat); // left side
+    createWallSegment(half - half/2, 1.5, half + w/2, ROOM_SIZE - doorSize - 0.8, 3, w, wallMat); // right side
+    // full -Z wall
+    createWallSegment(0, 1.5, -half - w/2, ROOM_SIZE, 3, w, wallMat);
+    // full +/- X walls
+    createWallSegment(half + w/2, 1.5, 0, w, 3, ROOM_SIZE + w*2, wallMat);
+    createWallSegment(-half - w/2, 1.5, 0, w, 3, ROOM_SIZE + w*2, wallMat);
+
+    // Player starting position just inside -Z
+    player.pos.set(0, 1.6, -half + 1.2);
+    camera.position.copy(player.pos);
+
+    // Spawn enemies (difficulty scales with room index)
+    spawnEnemies(Math.min(1 + Math.floor(index * 0.8), 12), index);
+  }
+
+  function createWall(x,y,z, sx, sz, mat){
+    // Not used; kept for extension
+  }
+  function createWall(x,y,z, width, height, mat){
+    // Not used
+  }
+
+  function createWallSegment(x,y,z, width, height, depth, mat){
+    // placement uses width along X or Z depending...
+    const geo = new THREE.BoxGeometry(width, height, depth);
+    const m = mat.clone();
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    currentRoom.sceneObjs.push(mesh);
+
+    // Add AABB
+    const min = new THREE.Vector3(
+      x - width/2, y - height/2, z - depth/2
+    );
+    const max = new THREE.Vector3(
+      x + width/2, y + height/2, z + depth/2
+    );
+    world.walls.push({min, max, mesh});
+  }
+
+  // --- Enemies & projectiles ---
+  const projectiles = [];
+  const enemyPool = [];
+
+  function spawnEnemies(count, difficultyIndex){
+    // difficulty increases speed and hp with room number
+    for (let i=0;i<count;i++){
+      const enemy = {
+        mesh: null,
+        pos: new THREE.Vector3(
+          (Math.random()*ROOM_SIZE - ROOM_SIZE/2)*0.6,
+          0.5,
+          (Math.random()*ROOM_SIZE - ROOM_SIZE/2)*0.6
+        ),
+        speed: 0.6 + difficultyIndex*0.12 + Math.random()*0.4,
+        hp: 10 + Math.floor(difficultyIndex*2 + Math.random()*6),
+        radius: 0.35,
+        alive: true
+      };
+      const geo = new THREE.BoxGeometry(0.8, 1.0, 0.8);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xff6666 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.position.copy(enemy.pos);
+      scene.add(mesh);
+      enemy.mesh = mesh;
+      currentRoom.enemies.push(enemy);
+      currentRoom.sceneObjs.push(mesh);
+    }
+    updateHUD();
+  }
+
+  // Shooting
+  renderer.domElement.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && player.alive && document.pointerLockElement === renderer.domElement) {
+      shoot();
+    }
+  });
+
+  function shoot(){
+    // Small projectile traveling from camera forward
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    const pos = camera.position.clone().add(dir.clone().multiplyScalar(0.6));
+    const proj = {
+      pos,
+      dir: dir.clone(),
+      speed: 25,
+      life: 1.8,
+      mesh: null,
+      damage: 7 + Math.floor(Math.random()*4)
+    };
+    const geo = new THREE.SphereGeometry(0.08, 8, 8);
+    const mat = new THREE.MeshStandardMaterial({ emissive: 0xffffee, emissiveIntensity: 0.6, color:0xffee88 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos);
+    mesh.castShadow = false;
+    scene.add(mesh);
+    proj.mesh = mesh;
+    projectiles.push(proj);
+  }
+
+  // --- Simple collision helpers ---
+  function sphereAABBOverlap(center, radius, aabb){
+    const cx = Math.max(aabb.min.x, Math.min(center.x, aabb.max.x));
+    const cy = Math.max(aabb.min.y, Math.min(center.y, aabb.max.y));
+    const cz = Math.max(aabb.min.z, Math.min(center.z, aabb.max.z));
+    const dist2 = (cx - center.x)*(cx - center.x) + (cy - center.y)*(cy - center.y) + (cz - center.z)*(cz - center.z);
+    return dist2 <= radius*radius;
+  }
+
+  function resolvePlayerWorldCollisions(){
+    // Basic pushback: if overlapping walls, push player out along separation vector
+    // We'll check each wall and move player slightly.
+    for (const wall of world.walls){
+      const aabb = wall;
+      // approximate projection of player's foot point (y=player.radius..)
+      const center = player.pos.clone();
+      // clamp y to wall's vertical range for overlap check
+      if (center.y < aabb.min.y) center.y = aabb.min.y;
+      if (center.y > aabb.max.y) center.y = aabb.max.y;
+      if (sphereAABBOverlap(center, player.radius, aabb)){
+        // find nearest point on AABB
+        const nearest = new THREE.Vector3(
+          Math.max(aabb.min.x, Math.min(player.pos.x, aabb.max.x)),
+          Math.max(aabb.min.y, Math.min(player.pos.y, aabb.max.y)),
+          Math.max(aabb.min.z, Math.min(player.pos.z, aabb.max.z))
+        );
+        // push vector
+        const push = player.pos.clone().sub(nearest);
+        // if push is zero, push outward along Y
+        if (push.lengthSq() < 1e-4) push.set(0,1,0);
+        push.normalize();
+        // move out until not colliding (simple step)
+        player.pos.add(push.multiplyScalar(0.02));
+        // damp velocity along push direction
+        const proj = player.velocity.dot(push);
+        if (proj < 0) player.velocity.addScaledVector(push, -proj);
+      }
+    }
+  }
+
+  function updateHUD(){
+    document.getElementById('health').textContent = Math.max(0, Math.floor(player.health));
+    document.getElementById('enemiesCount').textContent = currentRoom.enemies.filter(e=>e.alive).length;
+  }
+
+  // --- Game flow: init, reset, room progression ---
+  const doorTriggerZ = ROOM_SIZE/2 - 0.6; // when player crosses this on +Z, go to next room
+
+  function initGame(){
+    // reset state
+    player.health = 100;
+    player.alive = true;
+    player.velocity.set(0,0,0);
+    yaw = 0; pitch = 0;
+    projectiles.forEach(p=>scene.remove(p.mesh)); projectiles.length=0;
+    buildRoom(1);
+    document.getElementById('gameOver').style.display = 'none';
+    updateHUD();
+  }
+
+  document.getElementById('restartBtn').addEventListener('click', initGame);
+
+  // --- Main update loop ---
+  let lastTime = performance.now();
+  function animate(now) {
+    const dt = Math.min((now - lastTime)/1000, 0.05); // clamp dt
+    lastTime = now;
+    if (player.alive) {
+      update(dt);
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+
+  function update(dt){
+    // Camera orientation
+    camera.rotation.set(0,0,0);
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+
+    // Movement input
+    const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+    const right = new THREE.Vector3(Math.sin(yaw - Math.PI/2), 0, Math.cos(yaw - Math.PI/2));
+    let moveDir = new THREE.Vector3();
+    if (keys['KeyW']) moveDir.add(forward);
+    if (keys['KeyS']) moveDir.add(forward.clone().negate());
+    if (keys['KeyA']) moveDir.add(right.clone().negate());
+    if (keys['KeyD']) moveDir.add(right);
+    if (moveDir.lengthSq() > 0) moveDir.normalize();
+
+    // apply horizontal movement
+    const desiredVel = moveDir.multiplyScalar(player.speed);
+    // simple smoothing
+    player.velocity.x += (desiredVel.x - player.velocity.x) * Math.min(10*dt, 1);
+    player.velocity.z += (desiredVel.z - player.velocity.z) * Math.min(10*dt, 1);
+
+    // gravity and jump
+    player.velocity.y -= 9.8 * dt;
+    if (keys['Space'] && player.onGround) {
+      player.velocity.y = player.jumpSpeed;
+      player.onGround = false;
+    }
+
+    // integrate position
+    player.pos.addScaledVector(player.velocity, dt);
+
+    // ground collision
+    if (player.pos.y <= 1.6) { // simple ground at y=0: player's eye height 1.6; radius approx 0.25
+      player.pos.y = 1.6;
+      player.velocity.y = 0;
+      player.onGround = true;
+    }
+
+    // world collisions
+    resolvePlayerWorldCollisions();
+
+    // camera follow player
+    camera.position.copy(player.pos);
+
+    // Update projectiles
+    for (let i = projectiles.length-1; i >= 0; --i){
+      const p = projectiles[i];
+      p.pos.addScaledVector(p.dir, p.speed * dt);
+      p.mesh.position.copy(p.pos);
+      p.life -= dt;
+      // check collision vs enemies
+      let hitSomething = false;
+      for (const e of currentRoom.enemies){
+        if (!e.alive) continue;
+        const d2 = e.pos.distanceToSquared(p.pos);
+        if (d2 <= (e.radius + 0.12)*(e.radius + 0.12)){
+          // hit
+          e.hp -= p.damage;
+          hitSomething = true;
+          // small flash
+          e.mesh.material.emissive = new THREE.Color(0xff0000);
+          setTimeout(()=>{ if(e.alive) e.mesh.material.emissive = new THREE.Color(0x000000); }, 80);
+          if (e.hp <= 0){
+            e.alive = false;
+            scene.remove(e.mesh);
+          }
+          break;
+        }
+      }
+      // remove if life expired or hit environment (if outside room bounds)
+      if (p.life <= 0 || Math.abs(p.pos.x) > ROOM_SIZE || Math.abs(p.pos.z) > ROOM_SIZE || hitSomething){
+        scene.remove(p.mesh);
+        projectiles.splice(i,1);
+      }
+    }
+
+    // Update enemies: simple chase
+    for (const e of currentRoom.enemies){
+      if (!e.alive) continue;
+      // move towards player, avoid passing through walls by basic step
+      const dir = player.pos.clone().sub(e.pos);
+      dir.y = 0;
+      const dist = dir.length();
+      if (dist > 0.1) {
+        dir.normalize();
+        // move
+        e.pos.addScaledVector(dir, e.speed * dt);
+        // simple collision with world walls
+        // clamp within ROOM_SIZE/2 boundaries for a naive approach
+        e.pos.x = Math.max(-ROOM_SIZE/2 + 0.5, Math.min(ROOM_SIZE/2 - 0.5, e.pos.x));
+        e.pos.z = Math.max(-ROOM_SIZE/2 + 0.5, Math.min(ROOM_SIZE/2 - 0.5, e.pos.z));
+        e.mesh.position.copy(e.pos);
+      }
+      // if touching player -> damage player over time
+      const hitRange = e.radius + player.radius;
+      if (e.pos.distanceTo(player.pos) <= hitRange + 0.2){
+        // damage per second
+        player.health -= 12 * dt;
+        if (player.health <= 0){
+          player.health = 0;
+          player.alive = false;
+          showGameOver();
+        }
+        updateHUD();
+      }
+    }
+
+    // clear out-of-bounds enemies (shouldn't happen)
+    currentRoom.enemies = currentRoom.enemies.filter(e => e.alive);
+
+    // Progress to next room if player crosses doorTriggerZ on +Z
+    if (player.pos.z >= doorTriggerZ) {
+      buildRoom(roomIndex + 1);
+    }
+
+    updateHUD();
+  }
+
+  function showGameOver(){
+    document.getElementById('gameOver').style.display = 'block';
+    document.getElementById('gameOverTitle').textContent = 'You Died';
+    document.getElementById('gameOverText').textContent = `You reached room ${roomIndex}. Press R to try again.`;
+  }
+
+  // On resize
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Kick off
+  initGame();
+  requestAnimationFrame(animate);
+
+  </script>
 </body>
 </html>
