@@ -19,6 +19,12 @@ export function startTutorial(scene, player, playerObject, camera) {
   gameState.gameRunning = true;
   gameState.gameStarted = true;
   
+  // Show HUD and instructions in tutorial
+  const hud = document.getElementById('hud');
+  const instructions = document.getElementById('instructions');
+  if (hud) hud.style.display = 'block';
+  if (instructions) instructions.style.display = 'block';
+  
   // Disable fog for tutorial
   if (scene.fog) {
     scene.fog.far = 150;
@@ -294,7 +300,7 @@ function createEnemyDisplays(scene, x) {
   const enemyTypes = [
     { name: "Normal", color: 0xff3333, size: [0.6, 1.2, 0.6], zOffset: 6 },
     { name: "Fast", color: 0xff6633, size: [0.4, 0.8, 0.4], zOffset: 3 },
-    { name: "Ranged", color: 0x33ff66, size: [0.5, 1.0, 0.5], zOffset: 0 },
+    { name: "Ranged", color: 0x33ff66, size: [0.5, 1.4, 0.5], zOffset: 0 },
     { name: "Tank", color: 0x666666, size: [0.9, 1.5, 0.9], zOffset: -3 },
     { name: "Boss", color: 0x8800ff, size: [1.3, 2.2, 1.3], zOffset: -7 }
   ];

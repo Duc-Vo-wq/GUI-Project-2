@@ -28,15 +28,19 @@ export function spawnEnemies(scene, count, roomIndex, enemyMat, camera, player, 
   if (roomIndex === gameState.bossRoom) {
     const bossPos = new THREE.Vector3(0, 1.25, 0);
     enemies.push(new Enemy(scene, bossPos, roomIndex, 'boss', enemyMat, camera, player, damagePlayerCallback));
-    // Add some minions
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2;
+    
+    // Add 8 minions: 4 ranged (green) + 4 fast (orange)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const radius = 6; // Slightly farther out
       const pos = new THREE.Vector3(
-        Math.cos(angle) * 5,
+        Math.cos(angle) * radius,
         0.6,
-        Math.sin(angle) * 5
+        Math.sin(angle) * radius
       );
-      enemies.push(new Enemy(scene, pos, roomIndex, 'normal', enemyMat, camera, player, damagePlayerCallback));
+      // Alternate between ranged and fast
+      const type = i % 2 === 0 ? 'ranged' : 'fast';
+      enemies.push(new Enemy(scene, pos, roomIndex, type, enemyMat, camera, player, damagePlayerCallback));
     }
     updateUI(player, roomIndex, enemies.length);
     showMessage('BOSS FIGHT!', 0xff00ff);
@@ -84,10 +88,8 @@ export function spawnEnemies(scene, count, roomIndex, enemyMat, camera, player, 
     let type = 'normal';
     if (roomIndex >= 3) {
       const rand = Math.random();
-      if (rand < 0.25) type = 'fast';       // 25% fast
-      else if (rand < 0.45) type = 'ranged'; // 20% ranged (new!)
-      else if (rand < 0.6) type = 'tank';    // 15% tank
-      // else normal (40%)
+      if (rand < 0.3) type = 'fast';
+      else if (rand < 0.5) type = 'tank';
     }
     
     enemies.push(new Enemy(scene, position, roomIndex, type, enemyMat, camera, player, damagePlayerCallback));
