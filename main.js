@@ -71,7 +71,8 @@ function initGame() {
   let projectiles = [];
   let particleEffects = [];
   let treasureChests = [];
-  let gameRunning = true;
+  let gameRunning = false; // Start as false - game begins after start screen
+  let gameStarted = false; // Track if game has been started yet
   const totalRooms = 10; // Increased from 5
   const bossRoom = 10;
 
@@ -963,6 +964,7 @@ function initGame() {
   // === RESET GAME ===
   function resetGame() {
     gameRunning = true;
+    gameStarted = true;
     currentRoomIndex = 1;
     player.health = 100;
     player.maxHealth = 100;
@@ -985,9 +987,11 @@ function initGame() {
     const overlay = document.getElementById('overlay');
     const gameOverDiv = document.getElementById('gameOver');
     const upgradeDiv = document.getElementById('upgradeScreen');
+    const startDiv = document.getElementById('startScreen');
     if (overlay) overlay.classList.remove('active');
     if (gameOverDiv) gameOverDiv.style.display = 'none';
     if (upgradeDiv) upgradeDiv.style.display = 'none';
+    if (startDiv) startDiv.style.display = 'none';
     
     setLook(185.34, 0); // Reset to starting look direction
     buildRoom(1);
@@ -1003,6 +1007,74 @@ function initGame() {
 
   document.getElementById('restartBtn').addEventListener('click', resetGame);
 
+  // === START SCREEN ===
+  function showStartScreen() {
+    const overlay = document.getElementById('overlay');
+    
+    // Create start screen if it doesn't exist
+    if (!document.getElementById('startScreen')) {
+      const startHTML = `
+        <div id="startScreen" style="display:none; pointer-events:auto; background: linear-gradient(135deg, rgba(10, 20, 40, 0.95), rgba(30, 10, 60, 0.95)); color: #fff; padding: 60px 40px; border-radius: 20px; text-align: center; width: 600px; border: 4px solid rgba(100, 150, 255, 0.5); box-shadow: 0 0 60px rgba(100, 150, 255, 0.4);">
+          <h1 style="font-size: 56px; margin: 0 0 20px 0; color: #4af; text-shadow: 0 0 20px rgba(70, 170, 255, 0.8); font-weight: bold;">DUNGEON CRAWLER</h1>
+          <p style="margin: 0 0 40px 0; color: #aaa; font-size: 18px;">Fight through 10 rooms of enemies and defeat the boss!</p>
+          
+          <div style="background: rgba(0, 0, 0, 0.3); padding: 25px; border-radius: 10px; margin-bottom: 30px; border: 1px solid rgba(100, 150, 255, 0.2);">
+            <h3 style="color: #4af; margin-top: 0; font-size: 20px;">Controls</h3>
+            <p style="margin: 8px 0; font-size: 16px;"><strong>WASD</strong> - Move</p>
+            <p style="margin: 8px 0; font-size: 16px;"><strong>Mouse</strong> - Look around</p>
+            <p style="margin: 8px 0; font-size: 16px;"><strong>Left Click</strong> - Shoot</p>
+            <p style="margin: 8px 0; font-size: 16px;"><strong>Space</strong> - Jump</p>
+            <p style="margin: 8px 0; font-size: 16px;"><strong>R</strong> - Restart (anytime)</p>
+          </div>
+          
+          <button id="startBtn" style="background: linear-gradient(135deg, #2a6a4a, #1a5a3a); border: 3px solid #4ae290; color: white; padding: 20px 60px; border-radius: 12px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; transition: all 0.3s ease; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+            START GAME
+          </button>
+        </div>
+      `;
+      
+      overlay.insertAdjacentHTML('beforeend', startHTML);
+      
+      // Add hover effect for start button
+      const style = document.createElement('style');
+      style.textContent = `
+        #startBtn:hover {
+          background: linear-gradient(135deg, #3a7a5a, #2a6a4a);
+          border-color: #6af2b0;
+          transform: translateY(-3px) scale(1.05);
+          box-shadow: 0 10px 40px rgba(70, 220, 140, 0.5);
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // Add click handler
+      document.getElementById('startBtn').addEventListener('click', startGame);
+    }
+    
+    overlay.classList.add('active');
+    document.getElementById('startScreen').style.display = 'block';
+  }
+  
+  function startGame() {
+    const overlay = document.getElementById('overlay');
+    const startDiv = document.getElementById('startScreen');
+    
+    overlay.classList.remove('active');
+    startDiv.style.display = 'none';
+    
+    // Initialize game
+    gameRunning = true;
+    gameStarted = true;
+    buildRoom(1);
+    playerObject.position.copy(player.pos);
+    updateUI();
+    
+    // Request pointer lock after a brief delay to ensure the overlay is fully hidden
+    setTimeout(() => {
+      renderer.domElement.click();
+    }, 100);
+  }
+
   // === INITIALIZE ROOMS ===
   initRooms({
     scene,
@@ -1012,9 +1084,13 @@ function initGame() {
     spawnEnemies
   });
 
-  buildRoom(1);
-  playerObject.position.copy(player.pos);
+  // Don't build room yet - wait for start screen
+  // buildRoom(1);
+  // playerObject.position.copy(player.pos);
   updateUI();
+  
+  // Show start screen
+  showStartScreen();
   
   console.log('Room built, starting animation loop');
 
