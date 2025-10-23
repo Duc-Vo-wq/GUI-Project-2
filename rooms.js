@@ -75,7 +75,8 @@ export function buildRoom(index) {
 
   // Spawn enemies (if callback provided)
   if (typeof spawnEnemiesCb === 'function') {
-    const enemyCount = Math.min(2 + Math.floor(index * 1.2), 15);
+    // Reduced enemy count scaling - caps at 10 instead of 15
+    const enemyCount = Math.min(2 + Math.floor(index * 0.8), 10);
     spawnEnemiesCb(enemyCount, index);
   }
 }
@@ -263,6 +264,7 @@ function createDoorFrame(x, z, doorSize) {
 
 function createObstacles(count, roomSize, spawnZones) {
   const obstacles = []; // Track obstacle positions for spawn checking
+  const minSpacing = 3.0; // Minimum distance between obstacles
   
   for (let i = 0; i < count; i++) {
     const boxSize = 0.8 + Math.random() * 0.6;
@@ -275,12 +277,41 @@ function createObstacles(count, roomSize, spawnZones) {
     const box = new THREE.Mesh(boxGeo, boxMat);
     box.castShadow = true;
     
-    // Pick a random spawn zone
-    const zone = spawnZones[Math.floor(Math.random() * spawnZones.length)];
+    // Try to find a valid position (not too close to other obstacles)
+    let validPosition = false;
+    let attempts = 0;
+    let rx, rz;
     
-    // Place obstacle within the chosen zone
-    const rx = zone.minX + Math.random() * (zone.maxX - zone.minX);
-    const rz = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
+    while (!validPosition && attempts < 50) {
+      // Pick a random spawn zone
+      const zone = spawnZones[Math.floor(Math.random() * spawnZones.length)];
+      
+      // Place obstacle within the chosen zone
+      rx = zone.minX + Math.random() * (zone.maxX - zone.minX);
+      rz = zone.minZ + Math.random() * (zone.maxZ - zone.minZ);
+      
+      // Check distance to all other obstacles
+      validPosition = true;
+      for (const obs of obstacles) {
+        const obsCenter = new THREE.Vector3(
+          (obs.min.x + obs.max.x) / 2,
+          0,
+          (obs.min.z + obs.max.z) / 2
+        );
+        const distance = Math.sqrt((rx - obsCenter.x) ** 2 + (rz - obsCenter.z) ** 2);
+        
+        if (distance < minSpacing) {
+          validPosition = false;
+          break;
+        }
+      }
+      
+      attempts++;
+    }
+    
+    // If we couldn't find a valid position after 50 tries, skip this obstacle
+    if (!validPosition) continue;
+    
     box.position.set(rx, boxSize / 2, rz);
     
     scene.add(box);

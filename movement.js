@@ -45,7 +45,13 @@ export function updateMovement(playerObject, playerState, camera, scene, delta) 
   const origin = playerObject.position.clone();
   origin.y += 0.1;
   down.set(origin, new THREE.Vector3(0, -1, 0));
-  const intersects = down.intersectObjects(scene.children, true);
+  
+  // Only intersect with Mesh objects, not Sprites or Lights
+  const intersectableObjects = scene.children.filter(obj => 
+    obj.isMesh && obj.geometry && !obj.isSprite
+  );
+  
+  const intersects = down.intersectObjects(intersectableObjects, true);
   let groundY = -Infinity;
   if (intersects.length) groundY = intersects[0].point.y;
   
