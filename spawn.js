@@ -90,6 +90,7 @@ export function spawnEnemies(scene, count, roomIndex, enemyMat, camera, player, 
       const rand = Math.random();
       if (rand < 0.3) type = 'fast';
       else if (rand < 0.5) type = 'tank';
+      else if (roomIndex >= 5 && rand < 0.7) type = 'ranged';
     }
     
     enemies.push(new Enemy(scene, position, roomIndex, type, enemyMat, camera, player, damagePlayerCallback));

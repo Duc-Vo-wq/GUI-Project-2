@@ -88,10 +88,60 @@ function getRandomRoomType() {
   return 'lshaped';
 }
 
+// === HELPER FUNCTION FOR WALL TEXTURE ===
+function createWallTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Base wall color (dark stone)
+  ctx.fillStyle = '#3a4048';
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Draw brick pattern
+  const brickWidth = 64;
+  const brickHeight = 32;
+  ctx.strokeStyle = '#252a30';
+  ctx.lineWidth = 3;
+
+  for (let y = 0; y < 256; y += brickHeight) {
+    for (let x = 0; x < 256; x += brickWidth) {
+      const offset = (y / brickHeight) % 2 === 0 ? 0 : brickWidth / 2;
+      ctx.strokeRect(x + offset, y, brickWidth, brickHeight);
+
+      // Add slight color variation
+      const brightness = Math.random() * 20 - 10;
+      ctx.fillStyle = `rgba(${58 + brightness}, ${64 + brightness}, ${72 + brightness}, 0.5)`;
+      ctx.fillRect(x + offset + 2, y + 2, brickWidth - 4, brickHeight - 4);
+    }
+  }
+
+  // Add weathering details
+  for (let i = 0; i < 80; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const size = Math.random() * 4 + 1;
+    const darkness = Math.random() * 40;
+    ctx.fillStyle = `rgba(0, 0, 0, ${darkness / 100})`;
+    ctx.fillRect(x, y, size, size);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2);
+  return texture;
+}
+
 // === SMALL ROOM (12x12) ===
 function buildSmallRoom() {
   const size = 12;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x444a56 });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: createWallTexture(),
+    roughness: 0.9,
+    metalness: 0.1
+  });
   const w = WALL_THICKNESS;
   const half = size / 2;
 
@@ -131,7 +181,11 @@ function buildSmallRoom() {
 // === LARGE ROOM (18x18) ===
 function buildLargeRoom() {
   const size = 18;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x444a56 });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: createWallTexture(),
+    roughness: 0.9,
+    metalness: 0.1
+  });
   const w = WALL_THICKNESS;
   const half = size / 2;
 
@@ -170,7 +224,11 @@ function buildLargeRoom() {
 // === L-SHAPED ROOM ===
 function buildLShapedRoom() {
   const size = 16;
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x444a56 });
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: createWallTexture(),
+    roughness: 0.9,
+    metalness: 0.1
+  });
   const w = WALL_THICKNESS;
   const half = size / 2;
   const cornerSize = size * 0.4; // Size of the cut-out corner
@@ -251,15 +309,155 @@ function buildLShapedRoom() {
   if (camera) camera.position.copy(player.pos);
 }
 
+// === HELPER FUNCTION FOR BOX/CRATE TEXTURE ===
+function createBoxTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Base wood crate color (lighter brown)
+  ctx.fillStyle = '#8b6f47';
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Draw wooden planks (horizontal)
+  for (let y = 0; y < 256; y += 64) {
+    ctx.strokeStyle = '#6b4f3a';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(256, y);
+    ctx.stroke();
+
+    // Wood grain texture
+    for (let x = 0; x < 256; x += 15) {
+      const offset = Math.random() * 8;
+      ctx.strokeStyle = `rgba(107, 79, 58, ${Math.random() * 0.4 + 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 5);
+      ctx.lineTo(x + 10 + offset, y + 20);
+      ctx.stroke();
+    }
+  }
+
+  // Add corner brackets (metal straps)
+  ctx.fillStyle = '#4a4a4a';
+  const bracketSize = 30;
+  const bracketWidth = 8;
+
+  // Top-left bracket
+  ctx.fillRect(0, 0, bracketSize, bracketWidth);
+  ctx.fillRect(0, 0, bracketWidth, bracketSize);
+
+  // Top-right bracket
+  ctx.fillRect(256 - bracketSize, 0, bracketSize, bracketWidth);
+  ctx.fillRect(256 - bracketWidth, 0, bracketWidth, bracketSize);
+
+  // Bottom-left bracket
+  ctx.fillRect(0, 256 - bracketWidth, bracketSize, bracketWidth);
+  ctx.fillRect(0, 256 - bracketSize, bracketWidth, bracketSize);
+
+  // Bottom-right bracket
+  ctx.fillRect(256 - bracketSize, 256 - bracketWidth, bracketSize, bracketWidth);
+  ctx.fillRect(256 - bracketWidth, 256 - bracketSize, bracketWidth, bracketSize);
+
+  // Add some rivets/nails
+  ctx.fillStyle = '#2a2a2a';
+  const rivetPositions = [
+    [15, 15], [241, 15], [15, 241], [241, 241],
+    [128, 32], [128, 96], [128, 160], [128, 224]
+  ];
+
+  rivetPositions.forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+// === HELPER FUNCTION FOR DOOR TEXTURE ===
+function createDoorTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+
+  // Base wood color (dark oak)
+  ctx.fillStyle = '#3d2817';
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Wood grain (vertical planks)
+  for (let x = 0; x < 256; x += 40) {
+    ctx.strokeStyle = '#2a1b0f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 256);
+    ctx.stroke();
+
+    // Add wood grain lines
+    for (let y = 0; y < 256; y += 20) {
+      const offset = Math.random() * 10;
+      ctx.strokeStyle = `rgba(42, 27, 15, ${Math.random() * 0.5 + 0.3})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 30 + offset, y + 15);
+      ctx.stroke();
+    }
+  }
+
+  // Add metal bands
+  ctx.fillStyle = '#4a4a4a';
+  ctx.fillRect(0, 30, 256, 8);
+  ctx.fillRect(0, 128, 256, 8);
+  ctx.fillRect(0, 220, 256, 8);
+
+  // Add rivets
+  ctx.fillStyle = '#2a2a2a';
+  for (let x = 20; x < 256; x += 40) {
+    ctx.beginPath();
+    ctx.arc(x, 34, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, 132, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, 224, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
 // === HELPER FUNCTIONS ===
 function createDoorFrame(x, z, doorSize) {
   const frameGeo = new THREE.BoxGeometry(doorSize, 3.5, 0.3);
-  const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a7a7a });
+  const frameMat = new THREE.MeshStandardMaterial({
+    map: createDoorTexture(),
+    roughness: 0.8,
+    metalness: 0.3,
+    color: 0xffffff
+  });
   const frame = new THREE.Mesh(frameGeo, frameMat);
   frame.position.set(x, 1.75, z - 0.2);
-  frame.castShadow = true;
+  frame.castShadow = false;
   scene.add(frame);
   currentRoom.sceneObjs.push(frame);
+
+  // Add collision for the door to make it solid
+  const min = new THREE.Vector3(x - doorSize / 2, 1.75 - 3.5 / 2, z - 0.2 - 0.3 / 2);
+  const max = new THREE.Vector3(x + doorSize / 2, 1.75 + 3.5 / 2, z - 0.2 + 0.3 / 2);
+  world.walls.push({ min, max, mesh: frame });
 }
 
 function createObstacles(count, roomSize, spawnZones) {
@@ -269,8 +467,9 @@ function createObstacles(count, roomSize, spawnZones) {
   for (let i = 0; i < count; i++) {
     const boxSize = 0.8 + Math.random() * 0.6;
     const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-    const boxMat = new THREE.MeshStandardMaterial({ 
-      color: 0x6b4f3a,
+    const boxMat = new THREE.MeshStandardMaterial({
+      map: createBoxTexture(),
+      color: 0xffffff,
       roughness: 0.9,
       metalness: 0.1
     });

@@ -3,7 +3,7 @@
 
 import { clearCurrentRoom, world } from './rooms.js';
 import { gameState } from './gameState.js';
-import { updateUI } from './ui.js';
+import { updateUI, updateUIVisibility } from './ui.js';
 import { TreasureChest, treasureChests } from './items.js';
 
 let tutorialActive = false;
@@ -18,13 +18,10 @@ export function startTutorial(scene, player, playerObject, camera) {
   gameState.currentRoomIndex = 0;
   gameState.gameRunning = true;
   gameState.gameStarted = true;
-  
-  // Show HUD and instructions in tutorial
-  const hud = document.getElementById('hud');
-  const instructions = document.getElementById('instructions');
-  if (hud) hud.style.display = 'block';
-  if (instructions) instructions.style.display = 'block';
-  
+
+  // Update UI visibility (will show HUD and instructions for tutorial)
+  updateUIVisibility();
+
   // Disable fog for tutorial
   if (scene.fog) {
     scene.fog.far = 150;
@@ -67,14 +64,14 @@ function buildExpandedTutorialRoom(scene, player, camera) {
   const halfW = roomWidth / 2;
   const halfD = roomDepth / 2;
   
-  // Lighting
-  const ambient = new THREE.AmbientLight(0x404866, 0.6);
+  // Lighting - optimized for performance
+  const ambient = new THREE.AmbientLight(0x404866, 0.7);  // Slightly brighter to compensate for fewer lights
   scene.add(ambient);
   tutorialObjects.push(ambient);
-  
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5, 10, 5);
-  dirLight.castShadow = true;
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);  // PERFORMANCE: Reduced intensity
+  dirLight.position.set(5, 10, -5);
+  dirLight.castShadow = false;  // PERFORMANCE: Disabled shadows for better performance
   scene.add(dirLight);
   tutorialObjects.push(dirLight);
   
@@ -120,12 +117,12 @@ function buildExpandedTutorialRoom(scene, player, camera) {
   createSectionMarker(scene, sec2X, 0, "ENEMIES", 0xff6633);
   createEnemyDisplays(scene, sec2X);
   createInfoDisplay(scene, sec2X, -halfD + 3, [
-    "5 Enemy Types:",
-    "Normal - Balanced",
-    "Fast - Quick & Weak",
-    "Ranged - Shoots!",
-    "Tank - Slow & Tough",
-    "Boss - Very Dangerous!"
+    "5 Goon Types:",
+    "Thug - Balanced",
+    "Runner - Quick & Weak",
+    "Shooter - Guns!",
+    "Enforcer - Slow & Tough",
+    "Head Honcho - Deadly!"
   ]);
   
   // === SECTION 3: ITEMS (10, 0) ===
@@ -133,7 +130,7 @@ function buildExpandedTutorialRoom(scene, player, camera) {
   createSectionMarker(scene, sec3X, 0, "ITEMS", 0xffd700);
   createTreasureDisplays(scene, sec3X, player);
   createInfoDisplay(scene, sec3X, -halfD + 3, [
-    "Treasure Chests:",
+    "Medical Supplies:",
     "+30 Health",
     "",
     "Spawns randomly",
@@ -201,11 +198,11 @@ function createSectionMarker(scene, x, z, text, color) {
   
   // Floating title text
   createFloatingText(scene, x, 3.5, z, text, color, 6, 1.5);
-  
-  // Corner lights
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2;
-    const light = new THREE.PointLight(color, 0.6, 10);
+
+  // PERFORMANCE: Reduced corner lights from 4 to 2 for better performance
+  for (let i = 0; i < 2; i++) {
+    const angle = (i / 2) * Math.PI * 2;
+    const light = new THREE.PointLight(color, 0.4, 8);
     light.position.set(x + Math.cos(angle) * 7, 1, z + Math.sin(angle) * 9);
     scene.add(light);
     tutorialObjects.push(light);
@@ -290,7 +287,7 @@ function createPracticeTargets(scene, x, z) {
     const targetGeo = new THREE.BoxGeometry(1, 1.5, 1);
     const target = new THREE.Mesh(targetGeo, targetMat.clone());
     target.position.set(x - 3 + i * 3, 0.75, z);
-    target.castShadow = true;
+    target.castShadow = false;  // PERFORMANCE: Disabled shadows
     scene.add(target);
     tutorialObjects.push(target);
   }
@@ -300,8 +297,8 @@ function createEnemyDisplays(scene, x) {
   const enemyTypes = [
     { name: "Normal", color: 0xff3333, size: [0.6, 1.2, 0.6], zOffset: 6 },
     { name: "Fast", color: 0xff6633, size: [0.4, 0.8, 0.4], zOffset: 3 },
-    { name: "Ranged", color: 0x33ff66, size: [0.5, 1.4, 0.5], zOffset: 0 },
-    { name: "Tank", color: 0x666666, size: [0.9, 1.5, 0.9], zOffset: -3 },
+    { name: "Ranged", color: 0x33ff66, size: [0.5, 1.8, 0.5], zOffset: 0 },
+    { name: "Tank", color: 0x1144cc, size: [0.9, 1.5, 0.9], zOffset: -3 },
     { name: "Boss", color: 0x8800ff, size: [1.3, 2.2, 1.3], zOffset: -7 }
   ];
   
@@ -311,20 +308,20 @@ function createEnemyDisplays(scene, x) {
     
     // Enemy display model
     const enemyGeo = new THREE.BoxGeometry(...type.size);
-    const enemyMat = new THREE.MeshStandardMaterial({ 
+    const enemyMat = new THREE.MeshStandardMaterial({
       color: type.color,
       emissive: type.color,
-      emissiveIntensity: 0.4
+      emissiveIntensity: 0.3  // PERFORMANCE: Reduced from 0.4
     });
     const enemy = new THREE.Mesh(enemyGeo, enemyMat);
     enemy.position.set(xPos, type.size[1] / 2, zPos);
-    enemy.castShadow = true;
+    enemy.castShadow = false;  // PERFORMANCE: Disabled shadows
     scene.add(enemy);
     tutorialObjects.push(enemy);
     tutorialEnemies.push(enemy);
-    
-    // Add light
-    const light = new THREE.PointLight(type.color, 0.5, 5);
+
+    // PERFORMANCE: Reduced light intensity
+    const light = new THREE.PointLight(type.color, 0.3, 4);
     light.position.set(xPos, type.size[1] + 0.5, zPos);
     scene.add(light);
     tutorialObjects.push(light);
@@ -446,18 +443,18 @@ function createUpgradeDisplay(scene, x) {
     const boxMat = new THREE.MeshStandardMaterial({
       color: icon.color,
       emissive: icon.color,
-      emissiveIntensity: 0.7,
+      emissiveIntensity: 0.5,  // PERFORMANCE: Reduced from 0.7
       metalness: 0.4
     });
     const box = new THREE.Mesh(boxGeo, boxMat);
     box.position.set(x - 4, 0.6, icon.z);
-    box.castShadow = true;
+    box.castShadow = false;  // PERFORMANCE: Disabled shadows
     scene.add(box);
     tutorialObjects.push(box);
     tutorialEnemies.push(box); // Add to rotating objects
-    
-    // Bright light
-    const light = new THREE.PointLight(icon.color, 1.0, 7);
+
+    // PERFORMANCE: Reduced light intensity from 1.0 to 0.5 and distance from 7 to 5
+    const light = new THREE.PointLight(icon.color, 0.5, 5);
     light.position.set(x - 4, 0.6, icon.z);
     scene.add(light);
     tutorialObjects.push(light);
@@ -486,8 +483,9 @@ function createSkipButton(scene, player) {
   skipButton.position.set(buttonX, buttonY, buttonZ);
   scene.add(skipButton);
   tutorialObjects.push(skipButton);
-  
-  const light = new THREE.PointLight(0xff4444, 1.8, 12);
+
+  // PERFORMANCE: Reduced skip button light intensity
+  const light = new THREE.PointLight(0xff4444, 1.0, 8);
   light.position.set(buttonX, buttonY, buttonZ + 0.5);
   scene.add(light);
   tutorialObjects.push(light);
@@ -553,16 +551,15 @@ export function cleanupTutorialState(scene) {
 
 export function updateTutorial(scene, delta, projectiles, startGameCallback) {
   if (!tutorialActive || !skipButton) return;
-  
-  // Rotate enemy displays and upgrade icons
-  tutorialEnemies.forEach(obj => {
-    obj.rotation.y += delta * 0.8;
-  });
-  
-  // Animate treasure chests (spin and float)
+
+  // PERFORMANCE: Disabled rotation animations to reduce lag on lower-end systems
+  // tutorialEnemies.forEach(obj => {
+  //   obj.rotation.y += delta * 0.8;
+  // });
+
+  // Animate treasure chests (float only, no spinning for performance)
   treasureChests.forEach(chest => {
     if (chest.mesh) {
-      chest.mesh.rotation.y += delta * 0.5;
       // Floating animation
       const time = Date.now() * 0.001;
       chest.mesh.position.y = 0.3 + Math.sin(time * 2) * 0.1;

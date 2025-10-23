@@ -42,6 +42,11 @@ export function showUpgradeScreen(player, nextRoomCallback) {
   
   overlay.classList.add('active');
   upgradeDiv.style.display = 'block';
+
+  // Exit pointer lock to show cursor for upgrade selection
+  if (document.exitPointerLock) {
+    document.exitPointerLock();
+  }
 }
 
 function selectUpgrade(upgrade, player, nextRoomCallback) {
@@ -53,7 +58,15 @@ function selectUpgrade(upgrade, player, nextRoomCallback) {
   
   overlay.classList.remove('active');
   upgradeDiv.style.display = 'none';
-  
+
+  // Re-request pointer lock after upgrade selection
+  setTimeout(() => {
+    const canvas = document.querySelector('canvas');
+    if (canvas && canvas.requestPointerLock) {
+      canvas.click();
+    }
+  }, 100);
+
   nextRoomCallback();
 }
 

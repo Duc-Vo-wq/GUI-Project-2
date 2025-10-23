@@ -63,7 +63,7 @@ export class Enemy {
         this.preferredDistance = 8; // Tries to stay at this distance
         break;
       case 'tank':
-        this.health = 60 + roomIndex * 10;
+        this.health = 100 + roomIndex * 15;
         this.maxHealth = this.health;
         this.speed = 0.8 + roomIndex * 0.05;
         this.damage = 15 + roomIndex * 3;
@@ -205,17 +205,17 @@ export class Enemy {
     }
     
     const attackRange = this.type === 'tank' ? 2.0 : 1.5;
-    
-    // Ranged enemies try to maintain optimal distance
-    if (this.type === 'ranged' || this.type === 'boss') {
+
+    // Ranged enemies try to maintain optimal distance (but NOT the boss - it chases!)
+    if (this.type === 'ranged') {
       const preferredDist = this.preferredDistance || 8;
-      
+
       if (dist < preferredDist - 2) {
         // Too close - back away
         const awayDir = toPlayer.clone();
         awayDir.y = 0;
         awayDir.normalize().multiplyScalar(-1); // Reverse direction
-        
+
         const backupPos = this.mesh.position.clone().add(awayDir.multiplyScalar(this.speed * delta));
         if (!checkCollisionWithWalls(backupPos, 0.3)) {
           this.mesh.position.copy(backupPos);
@@ -225,9 +225,9 @@ export class Enemy {
         const desiredDir = toPlayer.clone();
         desiredDir.y = 0;
         desiredDir.normalize();
-        
+
         const testPos = this.mesh.position.clone().add(desiredDir.clone().multiplyScalar(this.speed * delta));
-        
+
         if (!checkCollisionWithWalls(testPos, 0.3)) {
           this.mesh.position.copy(testPos);
         } else {

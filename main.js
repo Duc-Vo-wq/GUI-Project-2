@@ -2,7 +2,7 @@
 import { createPlayerObject, initPointerLock, applyLookRotation } from './camera.js';
 import { createPlayerState, updateMovement } from './movement.js';
 import { initRooms, buildRoom } from './rooms.js';
-import { updateUI } from './ui.js';
+import { updateUI, updateTimer } from './ui.js';
 import { enemies } from './enemies.js';
 import { projectiles } from './projectiles.js';
 import { treasureChests } from './items.js';
@@ -28,6 +28,48 @@ function initGame() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0b0f1a);
   scene.fog = new THREE.Fog(0x0b0f1a, 1, 30);
+
+  // Add drab sky sphere
+  function createDrabSky() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Create vertical gradient for overcast sky
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#1a1f28');    // Dark blue-grey at top
+    gradient.addColorStop(0.3, '#252a33'); // Slightly lighter
+    gradient.addColorStop(0.7, '#2a2f38'); // Mid tone
+    gradient.addColorStop(1, '#1a1f28');    // Dark at horizon
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Add subtle cloud texture
+    ctx.fillStyle = 'rgba(40, 45, 55, 0.3)';
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 400; // Keep clouds in upper portion
+      const width = 40 + Math.random() * 60;
+      const height = 15 + Math.random() * 25;
+      ctx.beginPath();
+      ctx.ellipse(x, y, width, height, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const skyGeo = new THREE.SphereGeometry(100, 32, 32);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.BackSide,
+      fog: false
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    return sky;
+  }
+
+  scene.add(createDrabSky());
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -82,8 +124,53 @@ function initGame() {
   });
 
   // === MATERIALS ===
-  const floorMat = new THREE.MeshStandardMaterial({ 
-    color: 0x22272f,
+  // Create procedural floor texture (stone tiles)
+  function createFloorTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Base stone color
+    ctx.fillStyle = '#1a1f28';
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Draw tile grid
+    const tileSize = 64;
+    ctx.strokeStyle = '#0d1116';
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= 256; x += tileSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 256);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= 256; y += tileSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y);
+      ctx.stroke();
+    }
+
+    // Add random stone details
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const size = Math.random() * 3 + 1;
+      const brightness = Math.random() * 30;
+      ctx.fillStyle = `rgba(${brightness},${brightness},${brightness},0.3)`;
+      ctx.fillRect(x, y, size, size);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 4);
+    return texture;
+  }
+
+  const floorMat = new THREE.MeshStandardMaterial({
+    map: createFloorTexture(),
     roughness: 0.8,
     metalness: 0.2
   });
@@ -113,7 +200,7 @@ function initGame() {
   scene.add(ambient);
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(5, 10, 5);
+  dirLight.position.set(5, 10, -5);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 2048;
   dirLight.shadow.mapSize.height = 2048;
@@ -236,7 +323,10 @@ function initGame() {
         treasureChests.splice(i, 1);
       }
     }
-    
+
+    // Update timer every frame
+    updateTimer();
+
     renderer.render(scene, camera);
   }
 

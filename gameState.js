@@ -5,7 +5,7 @@ import { enemies } from './enemies.js';
 import { clearProjectiles } from './projectiles.js';
 import { clearTreasureChests } from './items.js';
 import { clearParticles } from './particles.js';
-import { showMessage, showDamageEffect, updateUI } from './ui.js';
+import { showMessage, showDamageEffect, updateUI, updateUIVisibility } from './ui.js';
 import { showUpgradeScreen } from './upgrades.js';
 import { buildRoom, currentRoom, clearCurrentRoom } from './rooms.js';
 import { setLook } from './camera.js';
@@ -98,12 +98,15 @@ function nextRoom(player, playerObject) {
   clearTreasureChests(playerObject.parent);
   buildRoom(gameState.currentRoomIndex);
   playerObject.position.copy(player.pos);
-  
+
   // Reset camera to face forward
   setLook(185.34, 0);
-  
+
   player.health = Math.min(player.maxHealth + player.maxHealthBonus, player.health + 20);
   updateUI(player, gameState.currentRoomIndex, enemies.length);
+
+  // Update UI visibility (will hide controls after tutorial)
+  updateUIVisibility();
 }
 
 function gameOver(player) {
@@ -273,13 +276,16 @@ export function returnToMainMenu(scene, player, playerObject) {
   
   // Then clear the current room
   clearCurrentRoom();
-  
+
   // Hide pause screen
   const overlay = document.getElementById('overlay');
   const pauseDiv = document.getElementById('pauseScreen');
   if (overlay) overlay.classList.remove('active');
   if (pauseDiv) pauseDiv.style.display = 'none';
-  
+
+  // Update UI visibility (will hide HUD and controls in main menu)
+  updateUIVisibility();
+
   // Show start screen
   setTimeout(() => {
     const canvas = document.querySelector('canvas');
@@ -303,25 +309,33 @@ export function showStartScreen(player, playerObject, renderer, camera) {
   }
   
   const startHTML = `
-    <div id="startScreen" style="display:none; pointer-events:auto; background: linear-gradient(135deg, rgba(10, 20, 40, 0.95), rgba(30, 10, 60, 0.95)); color: #fff; padding: 60px 40px; border-radius: 20px; text-align: center; width: 600px; border: 4px solid rgba(100, 150, 255, 0.5); box-shadow: 0 0 60px rgba(100, 150, 255, 0.4);">
-      <h1 style="font-size: 56px; margin: 0 0 20px 0; color: #4af; text-shadow: 0 0 20px rgba(70, 170, 255, 0.8); font-weight: bold;">DUNGEON CRAWLER</h1>
-      <p style="margin: 0 0 40px 0; color: #aaa; font-size: 18px;">Fight through 10 rooms of enemies and defeat the boss!</p>
-      
-      <div style="background: rgba(0, 0, 0, 0.3); padding: 25px; border-radius: 10px; margin-bottom: 30px; border: 1px solid rgba(100, 150, 255, 0.2);">
-        <h3 style="color: #4af; margin-top: 0; font-size: 20px;">Controls</h3>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>WASD</strong> - Move</p>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>Mouse</strong> - Look around</p>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>Left Click</strong> - Shoot</p>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>Space</strong> - Jump</p>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>TAB</strong> - Pause</p>
-        <p style="margin: 8px 0; font-size: 16px;"><strong>R</strong> - Restart (anytime)</p>
+    <div id="startScreen" style="display:none; pointer-events:auto; background: linear-gradient(135deg, rgba(10, 20, 40, 0.95), rgba(30, 10, 60, 0.95)); color: #fff; padding: 25px 30px; border-radius: 20px; text-align: center; width: 550px; border: 4px solid rgba(100, 150, 255, 0.5); box-shadow: 0 0 60px rgba(100, 150, 255, 0.4);">
+      <h1 style="font-size: 48px; margin: 0 0 12px 0; color: #4af; text-shadow: 0 0 20px rgba(70, 170, 255, 0.8); font-weight: bold;">MAFIA SHOWDOWN</h1>
+
+      <div style="background: rgba(139, 69, 19, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(218, 165, 32, 0.4); box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);">
+        <h2 style="color: #daa520; margin: 0 0 10px 0; font-size: 20px; text-shadow: 0 0 10px rgba(218, 165, 32, 0.6);">The Mission</h2>
+        <p style="margin: 0; color: #e8d4a8; font-size: 14px; line-height: 1.4; font-style: italic;">
+          Fight your way through the mob's hideout and take down the head honcho's goons. Clear all 10 floors to end their operation!
+        </p>
       </div>
-      
-      <button id="startBtn" style="background: linear-gradient(135deg, #2a6a4a, #1a5a3a); border: 3px solid #4ae290; color: white; padding: 20px 60px; border-radius: 12px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; transition: all 0.3s ease; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: block; margin: 10px auto; width: 80%;">
+
+      <div style="background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(100, 150, 255, 0.2);">
+        <h3 style="color: #4af; margin: 0 0 10px 0; font-size: 18px;">Controls</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 14px;">
+          <p style="margin: 3px 0;"><strong>WASD</strong> - Move</p>
+          <p style="margin: 3px 0;"><strong>Mouse</strong> - Look</p>
+          <p style="margin: 3px 0;"><strong>Click</strong> - Shoot</p>
+          <p style="margin: 3px 0;"><strong>Space</strong> - Jump</p>
+          <p style="margin: 3px 0;"><strong>TAB</strong> - Pause</p>
+          <p style="margin: 3px 0;"><strong>R</strong> - Restart</p>
+        </div>
+      </div>
+
+      <button id="startBtn" style="background: linear-gradient(135deg, #2a6a4a, #1a5a3a); border: 3px solid #4ae290; color: white; padding: 15px 40px; border-radius: 12px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 22px; font-weight: bold; transition: all 0.3s ease; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: block; margin: 8px auto; width: 75%;">
         START GAME
       </button>
-      
-      <button id="tutorialBtn" style="background: linear-gradient(135deg, #4a6a8a, #3a5a7a); border: 3px solid #6ab0ff; color: white; padding: 15px 50px; border-radius: 10px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; transition: all 0.3s ease; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: block; margin: 10px auto; width: 80%;">
+
+      <button id="tutorialBtn" style="background: linear-gradient(135deg, #4a6a8a, #3a5a7a); border: 3px solid #6ab0ff; color: white; padding: 12px 35px; border-radius: 10px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold; transition: all 0.3s ease; text-shadow: 0 2px 4px rgba(0,0,0,0.3); display: block; margin: 8px auto; width: 75%;">
         TUTORIAL
       </button>
     </div>
@@ -405,6 +419,10 @@ export function showStartScreen(player, playerObject, renderer, camera) {
   
   overlay.classList.add('active');
   document.getElementById('startScreen').style.display = 'block';
+
+  // Update UI visibility (will hide HUD and controls in main menu)
+  updateUIVisibility();
+
   console.log('Start screen displayed');
 }
 
@@ -426,7 +444,10 @@ function startGame(player, playerObject, renderer, camera) {
   buildRoom(1);
   playerObject.position.copy(player.pos);
   updateUI(player, gameState.currentRoomIndex, enemies.length);
-  
+
+  // Update UI visibility (will show HUD, hide controls since not in tutorial)
+  updateUIVisibility();
+
   // Request pointer lock after a brief delay
   setTimeout(() => {
     if (renderer) renderer.domElement.click();

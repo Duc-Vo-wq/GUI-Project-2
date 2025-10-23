@@ -3,6 +3,26 @@
 
 import { gameState } from './gameState.js';
 
+export function updateUIVisibility() {
+  const hud = document.getElementById('ui');
+  const instructions = document.getElementById('instructions');
+
+  // Hide both HUD and controls in main menu (gameStarted === false)
+  if (!gameState.gameStarted) {
+    if (hud) hud.style.display = 'none';
+    if (instructions) instructions.style.display = 'none';
+    return;
+  }
+
+  // Show HUD when game is started
+  if (hud) hud.style.display = 'block';
+
+  // Show controls ONLY during tutorial (room 0)
+  if (instructions) {
+    instructions.style.display = gameState.currentRoomIndex === 0 ? 'block' : 'none';
+  }
+}
+
 export function updateUI(player, currentRoomIndex, enemyCount) {
   const health = Math.max(0, player.health);
   const maxHealth = player.maxHealth + player.maxHealthBonus;
@@ -20,13 +40,20 @@ export function updateUI(player, currentRoomIndex, enemyCount) {
     healthBar.style.width = healthPercent + '%';
   }
   
+  // Timer is now updated separately via updateTimer() in game loop
+}
+
+// Update timer continuously (called every frame from game loop)
+export function updateTimer() {
+  const currentRoomIndex = gameState.currentRoomIndex;
+
   // Update timer (if in an active room, not tutorial)
   if (currentRoomIndex > 0 && gameState.gameRunning && !gameState.gamePaused) {
     const elapsed = (Date.now() - gameState.roomStartTime) / 1000;
     const minutes = Math.floor(elapsed / 60);
     const seconds = Math.floor(elapsed % 60);
     const timerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
+
     let timerEl = document.getElementById('roomTimer');
     if (!timerEl) {
       // Create timer element above health bar
